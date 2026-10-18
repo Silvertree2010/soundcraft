@@ -72,7 +72,7 @@ pub fn specs() -> Vec<CommandSpec> {
             e.session_mut().edit.sub_counter = f;
             Ok(json!({"format": f}))
         }),
-        cmd!(noundo "view.grid", "Grid Value", [], Some("Shift+=/-"), "{value: '1/16' | '1 bar' | '1/8t' | '1/4.' | {seconds} | {frames} | {samples}, or step: ±n values larger or smaller; lines?: bool}", always, |e, p| {
+        cmd!(noundo "view.grid", "Grid Value", [], None, "{value: '1/16' | '1 bar' | '1/8t' | '1/4.' | {seconds} | {frames} | {samples}, or step: ±n values larger or smaller; lines?: bool}", always, |e, p| {
             let g = value_or_step(p, e.session().edit.grid).ok_or_else(|| bad("view.grid", "unknown grid value"))?;
             let lines = p.get("lines").and_then(Value::as_bool);
             let s = e.session_mut();

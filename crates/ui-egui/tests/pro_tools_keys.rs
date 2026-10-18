@@ -34,24 +34,41 @@ fn start(app: &SoundApp) -> i64 {
 }
 
 #[test]
-fn shift_equals_and_minus_step_the_grid_value_and_with_alt_the_nudge_value() {
+fn alt_shift_equals_and_minus_step_the_nudge_value() {
     for (os, _) in OSES {
         let (ctx, mut app) = rig(os);
         app.run("view.grid", json!({"value": "1/16"})).unwrap();
         app.run("view.nudge", json!({"value": "1/16"})).unwrap();
         app.run("edit.select", json!({"tracks": ["Kick"], "start": 48_000, "end": 96_000})).unwrap();
-        press(&ctx, &mut app, Key::Plus, Modifiers::SHIFT);
-        press(&ctx, &mut app, Key::Minus, Modifiers::SHIFT);
-        press(&ctx, &mut app, Key::Minus, Modifiers::SHIFT);
         let up = if os == OperatingSystem::Mac { Key::Equals } else { Key::Plus };
         press(&ctx, &mut app, up, ALT_SHIFT);
         press(&ctx, &mut app, up, ALT_SHIFT);
         press(&ctx, &mut app, Key::Minus, ALT_SHIFT);
         let edit = &app.engine.session().edit;
-        assert_eq!((edit.grid.label(), edit.nudge.label()), ("1/32 note".to_string(), "1/8 note".to_string()), "{os:?}");
+        assert_eq!((edit.grid.label(), edit.nudge.label()), ("1/16 note".to_string(), "1/8 note".to_string()), "{os:?}");
         assert_eq!(start(&app), 48_000, "{os:?}");
         press(&ctx, &mut app, Key::Plus, Modifiers::NONE);
         assert!(start(&app) > 48_000, "{os:?}");
+    }
+}
+
+#[test]
+fn plus_and_minus_nudge_the_selection_by_the_nudge_value_including_shift_equals_for_plus() {
+    for (os, _) in OSES {
+        let (ctx, mut app) = rig(os);
+        app.run("view.grid", json!({"value": "1/16"})).unwrap();
+        app.run("view.nudge", json!({"value": {"samples": 100}})).unwrap();
+        app.run("edit.select", json!({"tracks": ["Kick"], "start": 48_000, "end": 96_000})).unwrap();
+        let mut at = vec![];
+        // "+" on a US keyboard is Shift+=, which egui may report as Equals or as Plus.
+        for (key, modifiers) in
+            [(Key::Equals, Modifiers::SHIFT), (Key::Plus, Modifiers::SHIFT), (Key::Plus, Modifiers::NONE), (Key::Minus, Modifiers::NONE)]
+        {
+            press(&ctx, &mut app, key, modifiers);
+            at.push(start(&app));
+        }
+        assert_eq!(at, [48_100, 48_200, 48_300, 48_200], "{os:?}");
+        assert_eq!(app.engine.session().edit.grid.label(), "1/16 note", "{os:?}");
     }
 }
 

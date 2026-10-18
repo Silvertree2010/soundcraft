@@ -122,10 +122,10 @@ fn fixed(app: &mut SoundApp, key: Key, m: Modifiers, mac: bool) -> bool {
             let _ = app.run("markers.add", json!({}));
             true
         }
-        // Shift+=/- step the Grid value and Alt+Shift+=/- the Nudge value; macOS sends Alt+Shift+= as =, not +.
-        Key::Plus | Key::Equals | Key::Minus if m.shift && !m.command && !m.ctrl && app.ui.window == MainWindow::Edit => {
+        // Alt+Shift+=/- step the Nudge value; macOS sends Alt+Shift+= as =, not +.
+        Key::Plus | Key::Equals | Key::Minus if m.shift && m.alt && !m.command && !m.ctrl && app.ui.window == MainWindow::Edit => {
             let step = if key == Key::Minus { -1 } else { 1 };
-            let _ = app.run(if m.alt { "view.nudge" } else { "view.grid" }, json!({"step": step}));
+            let _ = app.run("view.nudge", json!({"step": step}));
             true
         }
         Key::F12 if plain => {
@@ -162,8 +162,9 @@ fn fixed(app: &mut SoundApp, key: Key, m: Modifiers, mac: bool) -> bool {
             let _ = app.run("edit.tool", json!({"tool": tool}));
             true
         }
-        Key::Plus | Key::Minus if !m.command && app.ui.window == MainWindow::Edit => {
-            let dir = if key == Key::Plus { 1 } else { -1 };
+        // "+" is Shift+= on a US layout, so Shift+= nudges later like Plus; a bare "=" is not a nudge.
+        Key::Plus | Key::Minus | Key::Equals if !m.command && (key != Key::Equals || (m.shift && !m.ctrl)) && app.ui.window == MainWindow::Edit => {
+            let dir = if key == Key::Minus { -1 } else { 1 };
             let _ = app.run("edit.nudge", json!({"direction": dir}));
             true
         }
