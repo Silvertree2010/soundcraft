@@ -74,10 +74,29 @@ pub fn export_midi(e: &Engine, only: Option<&[TrackId]>) -> Result<Vec<u8>> {
                     n.length = n.length.min(clip_end - n.start).max(1);
                     seq.notes.push(n);
                 }
+                let mut kept: Vec<soundcraft_midi::CtrlEvent> = Vec::new();
                 for ev in sequence.ctrls.iter().filter(|ev| ev.tick.saturating_add(base) < clip_end) {
                     let mut ev = *ev;
                     ev.tick = ev.tick.saturating_add(base);
-                    seq.ctrls.push(ev);
+                    kept.push(ev);
+                }
+                // A sustain still held at the clip end is released there.
+                let mut release: Vec<soundcraft_midi::CtrlEvent> = Vec::new();
+                for ev in &kept {
+                    if ev.kind != soundcraft_midi::CtrlKind::Cc(64) {
+                        continue;
+                    }
+                    match release.iter_mut().find(|r| r.channel == ev.channel) {
+                        Some(r) if ev.tick >= r.tick => *r = *ev,
+                        Some(_) => {}
+                        None => release.push(*ev),
+                    }
+                }
+                seq.ctrls.append(&mut kept);
+                for mut r in release.into_iter().filter(|r| r.value >= 64) {
+                    r.tick = clip_end;
+                    r.value = 0;
+                    seq.ctrls.push(r);
                 }
             }
         }
